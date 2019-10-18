@@ -13,58 +13,64 @@ namespace DatingApp.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController: ControllerBase
+    public class AuthController : ControllerBase
     {
         private readonly IConfiguration _config;
         private readonly IAuthRepository _repo;
 
         public AuthController(IAuthRepository repo, IConfiguration config)
         {
-            _config= config;
-            _repo= repo;
-            
+            _config = config;
+            _repo = repo;
+
         }
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody]UserForRegisterDto userForRegisterDto){
+        public async Task<IActionResult> Register([FromBody]UserForRegisterDto userForRegisterDto)
+        {
             //validate request
 
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            userForRegisterDto.Username= userForRegisterDto.Username.ToLower();
-            if(await _repo.UserExists(userForRegisterDto.Username))
+            userForRegisterDto.Username = userForRegisterDto.Username.ToLower();
+            if (await _repo.UserExists(userForRegisterDto.Username))
                 return BadRequest("Usernam already exits");
-            var userToCreate= new User
+            var userToCreate = new User
             {
-                Username=userForRegisterDto.Username,
+                Username = userForRegisterDto.Username,
             };
 
-            var createdUser= await _repo.Register(userToCreate,userForRegisterDto.Password);
+            var createdUser = await _repo.Register(userToCreate, userForRegisterDto.Password);
             return StatusCode(201);
 
         }
         [HttpPost("login")]
-        public async Task<IActionResult> Login(UserForRegisterDto userForRegisterDto){
-            var userFromRepo= await _repo.Login(userForRegisterDto.Username.ToLower(),userForRegisterDto.Password);
-            if(userFromRepo==null)
+        public async Task<IActionResult> Login(UserForRegisterDto userForRegisterDto)
+        {
+
+            throw new Exception("Computer says no!");
+            var userFromRepo = await _repo.Login(userForRegisterDto.Username.ToLower(), userForRegisterDto.Password);
+            if (userFromRepo == null)
                 return Unauthorized();
-            
-            var claims= new[]{
+
+            var claims = new[]{
                 new Claim(ClaimTypes.NameIdentifier,userFromRepo.Id.ToString()),
                 new Claim(ClaimTypes.Name,userFromRepo.Username)
-            };
+                };
 
-            var key= new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config.GetSection("AppSettings:Token").Value));
-            var creds= new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-            var tokenDescriptor= new SecurityTokenDescriptor{
-                Subject= new ClaimsIdentity(claims),
-                Expires= DateTime.Now.AddDays(1),
-                SigningCredentials=creds
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config.GetSection("AppSettings:Token").Value));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.Now.AddDays(1),
+                SigningCredentials = creds
             };
-            var tokenHandler= new JwtSecurityTokenHandler();
-            var token= tokenHandler.CreateToken(tokenDescriptor);
-            return Ok(new{
-                token= tokenHandler.WriteToken(token)
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return Ok(new
+            {
+                token = tokenHandler.WriteToken(token)
             });
         }
     }
